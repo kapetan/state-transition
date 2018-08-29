@@ -1,0 +1,21 @@
+{
+  "name": "state-transition",
+  "version": "0.0.0",
+  "description": "Simple state machine library",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kapetan/state-transition.git"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kapetan/state-transition/issues"
+  },
+  "homepage": "https://github.com/kapetan/state-transition#readme",
+  "devDependencies": {
+    "standard": "^12.0.0"
+  }
+}
