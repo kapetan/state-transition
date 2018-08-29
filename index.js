@@ -10,11 +10,13 @@ var StateMachine = function (state, transitions) {
 }
 
 StateMachine.prototype.onEnter = function (name, cb) {
-  this._addListener('onEnter:' + name, cb)
+  if (cb) this._addListener('onEnter:' + name, cb)
+  else this._addListener('onEnter', name)
 }
 
 StateMachine.prototype.onLeave = function (name, cb) {
-  this._addListener('onLeave:' + name, cb)
+  if (cb) this._addListener('onLeave:' + name, cb)
+  else this._addListener('onLeave', name)
 }
 
 StateMachine.prototype.onPending = function (cb) {
@@ -46,11 +48,11 @@ StateMachine.prototype.trigger = function (name) {
 
   var args = Array.prototype.slice.call(arguments, 1)
 
-  this.pending = name
-  this._triggerListeners('onLeave:' + this.state, args, function (err) {
+  this.pending = { from: this.state, to: target.to }
+  this._triggerHookListeners('onLeave', this.state, args, function (err) {
     if (err) return onerror(err)
 
-    self._triggerListeners('onEnter:' + target.to, args, function (err) {
+    self._triggerHookListeners('onEnter', target.to, args, function (err) {
       if (err) return onerror(err)
       self.state = target.to
       self.pending = null
@@ -82,6 +84,15 @@ StateMachine.prototype._triggerListeners = function (name, args, cb) {
       .then(() => cb())
       .catch(cb)
   }
+}
+
+StateMachine.prototype._triggerHookListeners = function (hook, name, args, cb) {
+  var self = this
+  this._triggerListeners(hook + ':' + name, args, function (err) {
+    if (err) return cb(err)
+    args = [self.pending].concat(args)
+    self._triggerListeners(hook, args, cb)
+  })
 }
 
 StateMachine.prototype._triggerErrorListeners = function (err) {
