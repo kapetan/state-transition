@@ -1,6 +1,6 @@
 {
   "name": "state-transition",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Simple state machine library",
   "main": "index.js",
   "scripts": {
