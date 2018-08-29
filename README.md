@@ -2,6 +2,8 @@
 
 Simple state machine library.
 
+    npm install state-transition
+
 # Usage
 
 First argument to the constructor is the initial state followed by the state transitions.
