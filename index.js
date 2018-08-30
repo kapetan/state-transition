@@ -2,41 +2,50 @@ var WILDCARD = '*'
 
 var noop = function () {}
 
-var StateMachine = function (state, transitions) {
+var StateMachine = function (state, transitions, options) {
+  if (!options) options = {}
+
   this.state = state
   this.transitions = transitions
   this.pending = null
   this._events = Object.create(null)
+
+  var self = this
+
+  if (options.initial) {
+    process.nextTick(function () {
+      self.pending = { to: state }
+      self._triggerHookListeners('onEnter', state, [], function (err) {
+        if (err) return self._triggerErrorListeners(err)
+        self.pending = null
+      })
+    })
+  }
 }
 
 StateMachine.prototype.onEnter = function (name, cb) {
-  if (cb) this._addListener('onEnter:' + name, cb)
-  else this._addListener('onEnter', name)
+  this._addHookListeners('onEnter', name, cb)
 }
 
 StateMachine.prototype.onLeave = function (name, cb) {
-  if (cb) this._addListener('onLeave:' + name, cb)
-  else this._addListener('onLeave', name)
-}
-
-StateMachine.prototype.onPending = function (cb) {
-  this._addListener('onPending', cb)
+  this._addHookListeners('onLeave', name, cb)
 }
 
 StateMachine.prototype.onError = function (cb) {
   this._addListener('onError', cb)
 }
 
-StateMachine.prototype.trigger = function (name) {
+StateMachine.prototype.trigger = function (name, cb) {
   var self = this
   var transitions = this.transitions[name]
-  if (this.pending) return this._triggerListeners('onPending', [this.pending])
-  if (!transitions) return this._triggerErrorListeners(new Error(`unknown transition ${name}`))
-
   var onerror = function (err) {
     self.pending = null
     self._triggerErrorListeners(err)
+    if (cb) cb(err)
   }
+
+  if (this.pending) return onerror(new Error(`Transition to state ${this.pending.to} in progress`))
+  if (!transitions) return onerror(new Error(`Unknown transition ${name}`))
 
   var target = transitions.find(function (transition) {
     if (Array.isArray(transition.from)) return transition.from.indexOf(self.state) !== -1
@@ -44,7 +53,7 @@ StateMachine.prototype.trigger = function (name) {
   })
 
   if (!target) target = transitions.find(transition => transition.from === WILDCARD)
-  if (!target) return this._triggerErrorListeners(new Error(`cannot apply transition ${name} from state ${this.state}`))
+  if (!target) return onerror(new Error(`Cannot apply transition ${name} from state ${this.state}`))
 
   var args = Array.prototype.slice.call(arguments, 1)
 
@@ -64,6 +73,11 @@ StateMachine.prototype._addListener = function (name, cb) {
   var events = this._events[name]
   if (!events) events = this._events[name] = []
   events.push(cb)
+}
+
+StateMachine.prototype._addHookListeners = function (hook, name, cb) {
+  if (cb) this._addListener(hook + ':' + name, cb)
+  else this._addListener(hook, name)
 }
 
 StateMachine.prototype._triggerListeners = function (name, args, cb) {
