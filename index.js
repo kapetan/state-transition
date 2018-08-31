@@ -57,16 +57,31 @@ StateMachine.prototype.trigger = function (name, cb) {
 
   var args = Array.prototype.slice.call(arguments, 1)
 
-  this.pending = { from: this.state, to: target.to }
-  this._triggerHookListeners('onLeave', this.state, args, function (err) {
-    if (err) return onerror(err)
-
-    self._triggerHookListeners('onEnter', target.to, args, function (err) {
+  var ontarget = function (to) {
+    self.pending = { from: self.state, to: to }
+    self._triggerHookListeners('onLeave', self.state, args, function (err) {
       if (err) return onerror(err)
-      self.state = target.to
-      self.pending = null
+
+      self._triggerHookListeners('onEnter', to, args, function (err) {
+        if (err) return onerror(err)
+        self.state = to
+        self.pending = null
+      })
     })
-  })
+  }
+
+  if (typeof target.to !== 'function') ontarget(target.to)
+  else {
+    var result = target.to.apply(this, [this.state].concat(args))
+
+    if (result instanceof Promise) {
+      result
+        .then(ontarget)
+        .catch(onerror)
+    } else {
+      ontarget(result)
+    }
+  }
 }
 
 StateMachine.prototype._addListener = function (name, cb) {
@@ -83,12 +98,13 @@ StateMachine.prototype._addHookListeners = function (hook, name, cb) {
 StateMachine.prototype._triggerListeners = function (name, args, cb) {
   if (!cb) cb = noop
 
+  var self = this
   var events = this._events[name]
   if (!events) return cb()
   var promises = []
 
   events.forEach(function (fn) {
-    var result = fn.apply(null, args)
+    var result = fn.apply(self, args)
     if (result instanceof Promise) promises.push(result)
   })
 

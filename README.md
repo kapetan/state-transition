@@ -15,6 +15,9 @@ var sm = new StateMachine('idle', {
   start: [
     { from: 'idle', to: 'analyzing' }
   ],
+  stop: [
+    { from: 'analyzing', to: from => something ? 'idle' : 'advisory' }
+  ],
   cancel: [
     { from: ['analyzing', 'advisory'], to: 'idle' }
   ],
