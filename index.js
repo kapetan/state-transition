@@ -51,16 +51,14 @@ StateMachine.prototype.trigger = function (name, cb) {
 
   var target = transitions.find(function (transition) {
     if (
-      (Array.isArray(transition.from) && transition.from.indexOf(self.state) !== -1) ||
-        transition.from === self.state ||
-        transition.from === WILDCARD) {
+      (Array.isArray(transition.from) && transition.from.indexOf(self.state) !== -1) || transition.from === self.state) {
       return (transition.condition || (() => true)).apply(self, args)
     } else {
       return false
     }
   })
 
-  if (!target) target = transitions.find(transition => transition.from === WILDCARD)
+  if (!target) target = transitions.find(transition => transition.from === WILDCARD && (transition.condition || (() => true)).apply(self, args))
   if (!target) return onerror(new Error(`Cannot apply transition ${name} from state ${this.state}`))
 
   this.pending = { from: this.state, to: target.to }
