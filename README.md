@@ -16,7 +16,7 @@ var sm = new StateMachine('idle', {
     { from: 'idle', to: 'analyzing' }
   ],
   stop: [
-    { from: 'analyzing', to: from => something ? 'idle' : 'advisory' }
+    { from: 'analyzing', to: 'advisory', condition: () => some_condition }
   ],
   cancel: [
     { from: ['analyzing', 'advisory'], to: 'idle' }
