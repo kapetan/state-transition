@@ -51,10 +51,11 @@ StateMachine.prototype.trigger = function (name, cb) {
 
   var target = transitions.find(function (transition) {
     if (
-        (Array.isArray(transition.from) && transition.from.indexOf(self.state) !== -1)
-        || transition.from === self.state){
+      (Array.isArray(transition.from) && transition.from.indexOf(self.state) !== -1) ||
+        transition.from === self.state ||
+        transition.from === WILDCARD) {
       return (transition.condition || (() => true)).apply(self, args)
-    }else{
+    } else {
       return false
     }
   })
