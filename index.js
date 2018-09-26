@@ -47,41 +47,29 @@ StateMachine.prototype.trigger = function (name, cb) {
   if (this.pending) return onerror(new Error(`Transition to state ${this.pending.to} in progress`))
   if (!transitions) return onerror(new Error(`Unknown transition ${name}`))
 
-  var target = transitions.find(function (transition) {
-    if (Array.isArray(transition.from)) return transition.from.indexOf(self.state) !== -1
-    else return transition.from === self.state
-  })
-
-  if (!target) target = transitions.find(transition => transition.from === WILDCARD)
-  if (!target) return onerror(new Error(`Cannot apply transition ${name} from state ${this.state}`))
-
   var args = Array.prototype.slice.call(arguments, 1)
 
-  var ontarget = function (to) {
-    self.pending = { from: self.state, to: to }
-    self._triggerHookListeners('onLeave', self.state, args, function (err) {
-      if (err) return onerror(err)
-
-      self._triggerHookListeners('onEnter', to, args, function (err) {
-        if (err) return onerror(err)
-        self.state = to
-        self.pending = null
-      })
-    })
-  }
-
-  if (typeof target.to !== 'function') ontarget(target.to)
-  else {
-    var result = target.to.apply(this, [this.state].concat(args))
-
-    if (result instanceof Promise) {
-      result
-        .then(ontarget)
-        .catch(onerror)
+  var target = transitions.find(function (transition) {
+    if (
+      (Array.isArray(transition.from) && transition.from.indexOf(self.state) !== -1) || transition.from === self.state) {
+      return (transition.condition || (() => true)).apply(self, args)
     } else {
-      ontarget(result)
+      return false
     }
-  }
+  })
+
+  if (!target) target = transitions.find(transition => transition.from === WILDCARD && (transition.condition || (() => true)).apply(self, args))
+  if (!target) return onerror(new Error(`Cannot apply transition ${name} from state ${this.state}`))
+
+  this.pending = { from: this.state, to: target.to }
+  this._triggerHookListeners('onLeave', this.state, args, function (err) {
+    if (err) return onerror(err)
+    self._triggerHookListeners('onEnter', target.to, args, function (err) {
+      if (err) return onerror(err)
+      self.state = target.to
+      self.pending = null
+    })
+  })
 }
 
 StateMachine.prototype._addListener = function (name, cb) {
