@@ -61,6 +61,11 @@ StateMachine.prototype.trigger = function (name, cb) {
   if (!target) target = transitions.find(transition => transition.from === WILDCARD && (transition.condition || (() => true)).apply(self, args))
   if (!target) return onerror(new Error(`Cannot apply transition ${name} from state ${this.state}`))
 
+  if (target.to === '-') {
+    // ignore this transition
+    return
+  }
+
   this.pending = { from: this.state, to: target.to }
   this._triggerHookListeners('onLeave', this.state, args, function (err) {
     if (err) return onerror(err)
